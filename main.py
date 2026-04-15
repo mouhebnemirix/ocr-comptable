@@ -101,7 +101,7 @@ def call_glm_vision(image_b64: str, doc_type: str) -> dict:
         "Content-Type": "application/json",
     }
     payload = {
-        "model": "glm-4v-plus",
+        "model": "glm-4v",
         "max_tokens": 3000,
         "messages": [
             {

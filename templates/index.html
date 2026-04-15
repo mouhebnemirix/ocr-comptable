@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OCR Comptable — Système de Facturation</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0D1117;
+    --surface:  #161B22;
+    --surface2: #1C2333;
+    --border:   #30363D;
+    --accent:   #E6B84A;
+    --accent2:  #F0D080;
+    --blue:     #58A6FF;
+    --green:    #3FB950;
+    --red:      #F85149;
+    --text:     #E6EDF3;
+    --muted:    #8B949E;
+    --mono:     'IBM Plex Mono', monospace;
+    --sans:     'DM Sans', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── HEADER */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: 1rem;
+    letter-spacing: 0.05em;
+  }
+
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+
+  .logo-name { color: var(--text); }
+  .logo-name span { color: var(--accent); }
+
+  .header-stats {
+    display: flex;
+    gap: 1.5rem;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .header-stats .stat-val { color: var(--accent); font-weight: 600; }
+
+  /* ── MAIN LAYOUT */
+  main {
+    flex: 1;
+    max-width: 960px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  h2::before {
+    content: '';
+    display: inline-block;
+    width: 3px;
+    height: 18px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  /* ── CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+  }
+
+  /* ── TYPE SELECTOR */
+  .type-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .type-btn {
+    border: 1.5px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+    font-family: var(--sans);
+  }
+
+  .type-btn:hover { border-color: var(--accent); color: var(--text); }
+
+  .type-btn.active {
+    border-color: var(--accent);
+    background: rgba(230, 184, 74, 0.08);
+    color: var(--text);
+  }
+
+  .type-btn .type-icon { font-size: 1.6rem; display: block; margin-bottom: 6px; }
+  .type-btn .type-label { font-size: 0.85rem; font-weight: 600; display: block; }
+  .type-btn .type-desc { font-size: 0.75rem; color: var(--muted); display: block; margin-top: 2px; }
+
+  /* ── DROPZONE */
+  .dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 2.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface2);
+    position: relative;
+  }
+
+  .dropzone:hover, .dropzone.drag-over {
+    border-color: var(--accent);
+    background: rgba(230, 184, 74, 0.05);
+  }
+
+  .dropzone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+
+  .dz-icon { font-size: 2.5rem; margin-bottom: 0.8rem; display: block; }
+  .dz-text { font-size: 0.9rem; color: var(--muted); }
+  .dz-text strong { color: var(--accent); }
+  .dz-filename {
+    margin-top: 0.8rem;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--blue);
+    display: none;
+  }
+
+  /* ── UPLOAD BUTTON */
+  .btn-upload {
+    margin-top: 1.2rem;
+    width: 100%;
+    padding: 0.85rem;
+    background: var(--accent);
+    color: #0D1117;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-upload:hover { background: var(--accent2); }
+  .btn-upload:disabled { opacity: 0.5; cursor: not-allowed; background: var(--border); color: var(--muted); }
+
+  /* ── PROGRESS */
+  .progress-wrap { margin-top: 1rem; display: none; }
+  .progress-bar-bg {
+    background: var(--surface2);
+    border-radius: 99px;
+    height: 6px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .progress-bar {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 99px;
+    width: 0%;
+    transition: width 0.3s;
+    animation: pulse-bar 1.5s infinite;
+  }
+  @keyframes pulse-bar { 0%,100%{opacity:1} 50%{opacity:0.6} }
+  .progress-label {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 6px;
+    text-align: center;
+  }
+
+  /* ── RESULT PANEL */
+  #result-panel { display: none; }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .result-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 99px;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .badge-ok { background: rgba(63, 185, 80, 0.15); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+  .badge-err { background: rgba(248, 81, 73, 0.15); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
+
+  /* ── DATA GRID */
+  .data-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .data-field {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+  }
+
+  .data-field .field-label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+
+  .data-field .field-val {
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--text);
+    word-break: break-word;
+  }
+
+  .data-field.highlight .field-val { color: var(--accent); font-family: var(--mono); }
+
+  /* ── OPERATIONS TABLE */
+  .ops-table-wrap {
+    overflow-x: auto;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    margin-bottom: 1rem;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+
+  thead th {
+    background: var(--surface2);
+    padding: 0.6rem 0.9rem;
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    position: sticky; top: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr { border-bottom: 1px solid rgba(48,54,61,0.5); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(230,184,74,0.04); }
+  tbody td { padding: 0.55rem 0.9rem; vertical-align: middle; }
+
+  .td-debit { color: var(--red); font-family: var(--mono); }
+  .td-credit { color: var(--green); font-family: var(--mono); }
+  .td-solde { color: var(--accent); font-family: var(--mono); }
+
+  /* ── EXPORT SECTION */
+  .export-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .export-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .export-card .ex-icon { font-size: 1.8rem; }
+  .export-card .ex-title { font-size: 0.88rem; font-weight: 600; }
+  .export-card .ex-count {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .export-card .ex-count span { color: var(--accent); }
+
+  .btn-export {
+    margin-top: auto;
+    padding: 0.6rem 1rem;
+    background: transparent;
+    border: 1.5px solid var(--accent);
+    color: var(--accent);
+    border-radius: 6px;
+    font-family: var(--sans);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-decoration: none;
+    text-align: center;
+    display: block;
+  }
+
+  .btn-export:hover { background: var(--accent); color: #0D1117; }
+
+  /* ── HISTORY SECTION */
+  #history-wrap { display: none; }
+
+  .history-toggle {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    margin-top: 0.5rem;
+  }
+
+  .history-toggle:hover { color: var(--accent); }
+
+  /* ── TOAST */
+  #toast {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    padding: 0.75rem 1.2rem;
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.25s;
+    z-index: 999;
+    max-width: 320px;
+  }
+
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.toast-ok { border-color: var(--green); color: var(--green); }
+  #toast.toast-err { border-color: var(--red); color: var(--red); }
+
+  /* ── SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+  @media (max-width: 600px) {
+    .type-selector { grid-template-columns: 1fr; }
+    .export-grid { grid-template-columns: 1fr; }
+    .data-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🧾</div>
+    <span class="logo-name">OCR<span>.</span>Comptable</span>
+  </div>
+  <div class="header-stats">
+    <span>Factures: <span class="stat-val" id="hdr-fat">—</span></span>
+    <span>Opérations: <span class="stat-val" id="hdr-rel">—</span></span>
+  </div>
+</header>
+
+<main>
+
+  <!-- UPLOAD CARD -->
+  <div class="card">
+    <h2>Uploader un Document</h2>
+
+    <!-- Type selector -->
+    <div class="type-selector">
+      <button class="type-btn active" data-type="fatourah" onclick="selectType('fatourah',this)">
+        <span class="type-icon">🧾</span>
+        <span class="type-label">Fatourah / Facture</span>
+        <span class="type-desc">Facture fournisseur, reçu, bon commande</span>
+      </button>
+      <button class="type-btn" data-type="releve" onclick="selectType('releve',this)">
+        <span class="type-icon">🏦</span>
+        <span class="type-label">Relevé Bancaire</span>
+        <span class="type-desc">Extrait de compte, relevé mensuel</span>
+      </button>
+    </div>
+
+    <!-- Dropzone -->
+    <div class="dropzone" id="dropzone"
+         ondragover="handleDrag(event,true)"
+         ondragleave="handleDrag(event,false)"
+         ondrop="handleDrop(event)">
+      <input type="file" id="file-input" accept="image/*,.pdf"
+             onchange="fileSelected(this.files[0])">
+      <span class="dz-icon">📂</span>
+      <div class="dz-text">
+        Glisser &amp; déposer ou <strong>cliquer pour parcourir</strong><br>
+        <small style="color:var(--muted);font-size:0.72rem">JPG · PNG · HEIC · PDF (multi-pages supporté)</small>
+      </div>
+      <div class="dz-filename" id="dz-filename"></div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-wrap" id="progress-wrap">
+      <div class="progress-bar-bg"><div class="progress-bar" id="progress-bar"></div></div>
+      <div class="progress-label" id="progress-label">Envoi en cours…</div>
+    </div>
+
+    <button class="btn-upload" id="btn-upload" onclick="uploadFile()" disabled>
+      ⬆ Extraire les données
+    </button>
+  </div>
+
+  <!-- RESULT PANEL -->
+  <div class="card" id="result-panel">
+    <div class="result-header">
+      <h2 style="margin-bottom:0">Résultat Extraction</h2>
+      <span class="result-badge badge-ok" id="result-badge">✓ Extrait</span>
+    </div>
+    <div id="result-content"></div>
+  </div>
+
+  <!-- EXPORT CARD -->
+  <div class="card">
+    <h2>Exporter Excel</h2>
+    <div class="export-grid">
+      <div class="export-card">
+        <span class="ex-icon">🧾</span>
+        <div class="ex-title">Factures (Fatourat)</div>
+        <div class="ex-count">Enregistrements: <span id="exp-fat-count">—</span></div>
+        <a href="/export/fatourat" class="btn-export" onclick="toast('Téléchargement fatourat…','ok')">
+          ↓ Télécharger fatourat.xlsx
+        </a>
+      </div>
+      <div class="export-card">
+        <span class="ex-icon">🏦</span>
+        <div class="ex-title">Relevés Bancaires</div>
+        <div class="ex-count">Opérations: <span id="exp-rel-count">—</span></div>
+        <a href="/export/releves" class="btn-export" onclick="toast('Téléchargement relevés…','ok')">
+          ↓ Télécharger releves.xlsx
+        </a>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+var selectedType = 'fatourah';
+var selectedFile = null;
+
+function selectType(type, btn) {
+  selectedType = type;
+  var btns = document.querySelectorAll('.type-btn');
+  for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
+  btn.classList.add('active');
+}
+
+function fileSelected(file) {
+  if (!file) return;
+  selectedFile = file;
+  var fnEl = document.getElementById('dz-filename');
+  fnEl.textContent = '📄 ' + file.name + ' (' + (file.size/1024).toFixed(1) + ' Ko)';
+  fnEl.style.display = 'block';
+  document.getElementById('btn-upload').disabled = false;
+}
+
+function handleDrag(e, over) {
+  e.preventDefault();
+  document.getElementById('dropzone').classList.toggle('drag-over', over);
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropzone').classList.remove('drag-over');
+  var file = e.dataTransfer.files[0];
+  if (file) {
+    document.getElementById('file-input').files = e.dataTransfer.files;
+    fileSelected(file);
+  }
+}
+
+function setProgress(pct, label) {
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = label;
+}
+
+function uploadFile() {
+  if (!selectedFile) return;
+
+  var form = new FormData();
+  form.append('file', selectedFile);
+  form.append('doc_type', selectedType);
+
+  document.getElementById('progress-wrap').style.display = 'block';
+  document.getElementById('btn-upload').disabled = true;
+  document.getElementById('result-panel').style.display = 'none';
+  setProgress(20, 'Envoi du fichier…');
+
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/upload', true);
+
+  xhr.upload.onprogress = function(e) {
+    if (e.lengthComputable) {
+      var pct = Math.round(e.loaded / e.total * 40);
+      setProgress(pct, 'Upload ' + pct + '%…');
+    }
+  };
+
+  xhr.onload = function() {
+    setProgress(90, 'Traitement GLM Vision…');
+    try {
+      var data = JSON.parse(xhr.responseText);
+      if (data.error) {
+        showError(data.error);
+      } else {
+        setProgress(100, 'Terminé ✓');
+        showResult(data);
+        refreshStats();
+        toast('Document extrait avec succès (' + (data.pages||1) + ' page(s))', 'ok');
+      }
+    } catch(e) {
+      showError('Réponse serveur invalide');
+    }
+    setTimeout(function(){ document.getElementById('progress-wrap').style.display='none'; }, 1200);
+    document.getElementById('btn-upload').disabled = false;
+  };
+
+  xhr.onerror = function() {
+    showError('Erreur réseau');
+    document.getElementById('progress-wrap').style.display='none';
+    document.getElementById('btn-upload').disabled = false;
+  };
+
+  setProgress(10, 'Connexion au serveur…');
+  xhr.send(form);
+}
+
+function showResult(data) {
+  var panel = document.getElementById('result-panel');
+  var content = document.getElementById('result-content');
+  var badge = document.getElementById('result-badge');
+  panel.style.display = 'block';
+  badge.className = 'result-badge badge-ok';
+  badge.textContent = '✓ Extrait · ' + (data.pages||1) + ' page(s)';
+
+  if (data.type === 'fatourah') {
+    var d = data.data;
+    content.innerHTML =
+      '<div class="data-grid">' +
+      field('Fournisseur', d.fournisseur) +
+      field('Date Facture', d.date_facture) +
+      field('N° Facture', d.numero_facture) +
+      field('Montant HT', d.montant_ht, true) +
+      field('TVA', d.tva, true) +
+      field('Total TTC', d.total_ttc, true) +
+      field('Notes', d.notes) +
+      '</div>';
+  } else {
+    var d = data.data;
+    var ops = d.operations || [];
+    var rows = '';
+    for (var i = 0; i < ops.length; i++) {
+      var op = ops[i];
+      rows += '<tr>' +
+        '<td>' + esc(op.date) + '</td>' +
+        '<td>' + esc(op.libelle) + '</td>' +
+        '<td class="td-debit">' + esc(op.debit) + '</td>' +
+        '<td class="td-credit">' + esc(op.credit) + '</td>' +
+        '<td class="td-solde">' + esc(op.solde) + '</td>' +
+        '</tr>';
+    }
+    content.innerHTML =
+      '<div class="data-grid">' +
+      field('Compte', d.compte) +
+      field('Période', d.periode) +
+      field('Opérations extraites', ops.length, true) +
+      '</div>' +
+      (ops.length > 0 ? 
+        '<div class="ops-table-wrap"><table>' +
+        '<thead><tr><th>Date</th><th>Libellé</th><th>Débit</th><th>Crédit</th><th>Solde</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody></table></div>'
+      : '<p style="color:var(--muted);font-size:0.85rem">Aucune opération extraite.</p>');
+  }
+  panel.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function showError(msg) {
+  var panel = document.getElementById('result-panel');
+  var badge = document.getElementById('result-badge');
+  var content = document.getElementById('result-content');
+  panel.style.display = 'block';
+  badge.className = 'result-badge badge-err';
+  badge.textContent = '✗ Erreur';
+  content.innerHTML = '<p style="color:var(--red);font-family:var(--mono);font-size:0.82rem">⚠ ' + esc(msg) + '</p>';
+  toast(msg, 'err');
+}
+
+function field(label, val, highlight) {
+  return '<div class="data-field' + (highlight?' highlight':'') + '">' +
+    '<div class="field-label">' + esc(label) + '</div>' +
+    '<div class="field-val">' + esc(val||'—') + '</div>' +
+    '</div>';
+}
+
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function toast(msg, type) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show toast-' + (type||'ok');
+  clearTimeout(el._t);
+  el._t = setTimeout(function(){ el.className=''; }, 3500);
+}
+
+function refreshStats() {
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', '/stats', true);
+  xhr.onload = function() {
+    try {
+      var d = JSON.parse(xhr.responseText);
+      document.getElementById('hdr-fat').textContent = d.fatourat;
+      document.getElementById('hdr-rel').textContent = d.releves;
+      document.getElementById('exp-fat-count').textContent = d.fatourat;
+      document.getElementById('exp-rel-count').textContent = d.releves;
+    } catch(e) {}
+  };
+  xhr.send();
+}
+
+// Init
+refreshStats();
+</script>
+</body>
+</html>
